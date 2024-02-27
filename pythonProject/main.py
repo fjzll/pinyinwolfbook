@@ -1,38 +1,77 @@
 import pypinyin
 from pypinyin import Style
+import os
 
-def text_to_pinyin(text):
-    pinyin_lines = []  # For storing pinyin annotations
-    chinese_lines = []  # For storing corresponding Chinese characters
 
-    for char in text:
-        if '\u4e00' <= char <= '\u9fff':  # Chinese character range
-            # Use Style.TONE to get pinyin with tone marks
-            pinyin_annotation = pypinyin.pinyin(char, style=Style.TONE, heteronym=False)
-            pinyin_lines.append(''.join(pinyin_annotation[0]))  # Add pinyin to the list
-            chinese_lines.append(char)  # Add Chinese character to the list
-        else:
-            # For non-Chinese characters, add them directly, keeping the alignment
-            pinyin_lines.append(' ')
-            chinese_lines.append(char)
+def text_to_pinyin(text, chunk_size=8):
+    # First pass: find the maximum pinyin length
+    max_length = 0
+    for i in range(0, len(text), chunk_size):
+        chunk = text[i:i+chunk_size]
+        for char in chunk:
+            if '\u4e00' <= char <= '\u9fff':  # Chinese character range
+                pinyin_annotation = pypinyin.pinyin(char, style=Style.TONE, heteronym=False)
+                pinyin_length = len(''.join(pinyin_annotation[0]))
+                max_length = max(max_length, pinyin_length)
+    # print(max_length)
 
-    # Combine the lists into strings, with each element followed by a space for alignment
-    pinyin_text = ' '.join(pinyin_lines)
-    chinese_text = ' '.join(chinese_lines)
+    # Second pass: format the text with padding
+    formatted_text = ""  # Initialize the formatted text string
 
-    # Format the final text with pinyin above the Chinese characters
-    formatted_text = pinyin_text + '\n' + chinese_text
+    for i in range(0, len(text), chunk_size):
+        chunk = text[i:i+chunk_size]
+        pinyin_line = ""
+        chinese_line = ""
 
-    return formatted_text
+        for char in chunk:
+            if '\u4e00' <= char <= '\u9fff':  # Chinese character range
+                # Get pinyin with tone marks
+                pinyin_annotation = pypinyin.pinyin(char, style=Style.TONE, heteronym=False)
+                pinyin = ''.join(pinyin_annotation[0])
+                # Pad the pinyin to the max length
+                pinyin_line += pinyin.ljust(max_length+1)
+                chinese_line += char.ljust(max_length)
+            else:
+                # Non-Chinese characters, add spaces in pinyin line for alignment
+                pinyin_line += char.ljust(1)
+                chinese_line += char.ljust(1)
+
+        # Combine the pinyin and Chinese characters
+        formatted_text += pinyin_line.rstrip() + '\n' + chinese_line.rstrip() + "\n\n"
+
+    return formatted_text.strip()
+
+
+# Specify the source directory where your files are located
+source_directory = '/Users/admin/Desktop/pinyinwolfbook'
+# Specify the destination directory where you want the new files to be saved
+destination_directory = '/Users/admin/Desktop/pinyinwolfbook'
+# Ensure the destination directory exists
+os.makedirs(destination_directory, exist_ok=True)
+# Process files from Chapter 1 to 36
+for chapter_number in range(10, 37):  # 1 to 36 inclusive
+    # Construct file name based on chapter number
+    filename = f'Simplified_Chapter{chapter_number}_Mandarin.txt'
+    source_file_path = os.path.join(source_directory, filename)
+
+    # Ensure the source file exists before attempting to process it
+    if os.path.exists(source_file_path):
+        output_filename = f'pinyinwolfbook_chapter{chapter_number}.txt'
+        destination_file_path = os.path.join(destination_directory, output_filename)
+
+    # Read the content of the source file
+        with open(source_file_path, 'r', encoding='utf-8') as file:
+            extracted_text = file.read()
 
 # Read file from source text.
-source_file_path = "/Users/admin/Desktop/pinyinwolfbook/wolfbookshortversion.txt"
-with open(source_file_path, "r") as file:
-    extracted_text = file.read()
+# source_file_path = "/Users/admin/Desktop/pinyinwolfbook/Simplified_Chapter9_Mandarin.txt"
+# with open(source_file_path, "r", encoding='utf-8') as file:
+#    extracted_text = file.read()
 
 # Convert into pinyin
-annotated_text = text_to_pinyin(extracted_text)
+        annotated_text = text_to_pinyin(extracted_text)
 
 # Write the formatted text to a file
-with open("/Users/admin/Desktop/pinyinwolfbook/pinyinwolfbook.txt", "w") as file:
-    file.write(annotated_text)
+# output_file_path = "/Users/admin/Desktop/pinyinwolfbook/pinyinwolfbook_chapter9.txt"
+        with open(destination_file_path, "w", encoding='utf-8') as file:
+            file.write(annotated_text)
